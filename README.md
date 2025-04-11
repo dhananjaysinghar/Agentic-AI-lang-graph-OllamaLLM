@@ -2,11 +2,16 @@
 Agentic-AI-lang-graph-OllamaLLM
 
 
+# LangGraph Workflow Diagram
+
+```mermaid
+%% Optional configuration
 ---
 config:
   flowchart:
     curve: linear
 ---
+
 graph TD;
 	__start__([<p>__start__</p>]):::first
 	reformulate_question(reformulate_question)
