@@ -34,6 +34,7 @@ graph TD;
 
 
 ## Langgraph integration
+```
 https://ollama.com/download/
 ollama run llama3.2
 ollama pull mistral
@@ -43,3 +44,4 @@ pip install langchain
 pip install langchain_community
 pip install langgraph
 pip install langchain-ollama --upgrade
+```
