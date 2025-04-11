@@ -5,7 +5,6 @@ Agentic-AI-lang-graph-OllamaLLM
 # LangGraph Workflow Diagram
 
 ```mermaid
-%% Optional configuration
 ---
 config:
   flowchart:
