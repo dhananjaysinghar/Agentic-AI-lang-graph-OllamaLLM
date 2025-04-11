@@ -27,3 +27,15 @@ graph TD;
 	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc
 ```
+
+
+## Langgraph integration
+https://ollama.com/download/
+ollama run llama3.2
+ollama pull mistral
+ollama run mistral
+
+pip install langchain
+pip install langchain_community
+pip install langgraph
+pip install langchain-ollama --upgrade
