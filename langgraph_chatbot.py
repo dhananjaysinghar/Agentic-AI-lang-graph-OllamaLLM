@@ -12,23 +12,30 @@ class QAState(TypedDict):
     fact_check: str
     summary: str
 
-# 2. LLM instances
-llm_base = OllamaLLM(model="mistral")
+# 2. LLMs
 llm_streaming = OllamaLLM(model="mistral", streaming=True)
 
-# 3. Helper to send messages
-async def send_msg(label: str, content: str, author: str = "🧠 Agent"):
-    await cl.Message(content=f"{label} {content.strip()}", author=author).send()
-
-# 4. Graph Nodes
+# 3. Graph Nodes
 async def reformulate_question_node(state: QAState) -> QAState:
     q = state["question"]
-    new_q = await llm_base.ainvoke(f"Rephrase this question clearly: {q}")
-    await send_msg("🔄 Reformulated:", new_q)
-    return {**state, "reformulated_question": new_q.strip()}
+    prompt = f"Rephrase this question clearly: {q}"
+
+    msg = cl.Message(content="", author="🔄 Rephraser Agent")
+    await msg.send()
+
+    reformulated = ""
+    async for token in llm_streaming.astream(prompt):
+        reformulated += token
+        await msg.stream_token(token)
+
+    msg.content = reformulated
+    await msg.update()
+    return {**state, "reformulated_question": reformulated.strip()}
+
 
 async def generate_answer_node(state: QAState) -> QAState:
     q = state["reformulated_question"]
+
     msg = cl.Message(content="", author="📘 Answer Agent")
     await msg.send()
 
@@ -41,6 +48,7 @@ async def generate_answer_node(state: QAState) -> QAState:
     await msg.update()
     return {**state, "answer": full_answer.strip()}
 
+
 async def fact_check_agent(state: QAState) -> QAState:
     prompt = dedent(f"""
         You are a fact-checking agent. Verify the accuracy of this answer.
@@ -48,9 +56,19 @@ async def fact_check_agent(state: QAState) -> QAState:
         Answer: {state["answer"]}
         Provide a verdict and cite sources if possible.
     """)
-    check = await llm_base.ainvoke(prompt)
-    await send_msg("🔍 Fact Check:", check)
-    return {**state, "fact_check": check.strip()}
+
+    msg = cl.Message(content="", author="🔍 Fact Check Agent")
+    await msg.send()
+
+    verdict = ""
+    async for token in llm_streaming.astream(prompt):
+        verdict += token
+        await msg.stream_token(token)
+
+    msg.content = verdict
+    await msg.update()
+    return {**state, "fact_check": verdict.strip()}
+
 
 async def summarize_node(state: QAState) -> QAState:
     prompt = dedent(f"""
@@ -58,11 +76,20 @@ async def summarize_node(state: QAState) -> QAState:
         Answer: {state["answer"]}
         Fact-Check: {state["fact_check"]}
     """)
-    summary = await llm_base.ainvoke(prompt)
-    await send_msg("📝 Summary:", summary)
+
+    msg = cl.Message(content="", author="📝 Summary Agent")
+    await msg.send()
+
+    summary = ""
+    async for token in llm_streaming.astream(prompt):
+        summary += token
+        await msg.stream_token(token)
+
+    msg.content = summary
+    await msg.update()
     return {**state, "summary": summary.strip()}
 
-# 5. Build LangGraph
+# 4. Build LangGraph
 builder = StateGraph(QAState)
 builder.set_entry_point("reformulate_question")
 builder.add_node("reformulate_question", reformulate_question_node)
@@ -76,14 +103,12 @@ builder.add_edge("fact_check_agent", "summarize")
 builder.add_edge("summarize", END)
 
 graph = builder.compile()
-print(graph.get_graph().draw_mermaid())
-# with open("graph.mmd", "w") as f:
-#     f.write(graph.get_graph().draw_mermaid())
 
-# 6. Chainlit entry
+# Optional: To view the graph
+# print(graph.get_graph().draw_mermaid())
+
+# 5. Chainlit entry
 @cl.on_message
 async def on_message(message: cl.Message):
     await cl.Message(content=f"❓ Question: {message.content}").send()
     await graph.ainvoke({"question": message.content})
-
-# chainlit run /Users/dhananjayasamantasinghar/Desktop/test-python/src/test/langgraph_chatbot.py
