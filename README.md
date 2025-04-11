@@ -29,6 +29,10 @@ graph TD;
 ```
 
 
+
+![image](https://github.com/user-attachments/assets/9951df97-c65d-4734-8593-8d661f197ef3)
+
+
 ## Langgraph integration
 https://ollama.com/download/
 ollama run llama3.2
